@@ -5,7 +5,7 @@ import os
 workingFolderEnv = os.environ.setdefault("WORKINGFOLDER", "/data")
 if not os.path.isdir(workingFolderEnv):
     raise NotADirectoryError("Unable to find working directory at %s" %workingFolderEnv)
-inputFolderEnv = os.environ.setdefault("INPUTFOLDER", os.path.join(workingFolderEnv, "alignmentArtifactFilteredVCF"))
+inputFolderEnv = os.environ.setdefault("INPUTFOLDER", os.path.join(workingFolderEnv, "freyjaOutput"))
 if not os.path.isdir(inputFolderEnv):
     raise NotADirectoryError("Unable to find input folder at %s" %inputFolderEnv)
 readGroupedFolderEnv = os.environ.setdefault("READGROUPEDFOLDER", os.path.join(workingFolderEnv, "rgBAM"))
