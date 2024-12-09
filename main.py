@@ -36,9 +36,9 @@ def findFreyjaStringentFilteredVCF(stringentFilteredVCFFolder:str=inputFolderEnv
             candidates.append(vcf)
     if len(candidates) == 0:
         raise FileNotFoundError("Unable to find any .freyjaMod.vcf files in folder %s" %stringentFilteredVCFFolder)
-    if len(candidates) > 1:
-        raise RuntimeError("Found multiple .freyjaMod.vcf files in folder %s" %stringentFilteredVCFFolder)
-    return os.path.join(stringentFilteredVCFFolder, candidates[0])
+    # if len(candidates) > 1:
+    #     raise RuntimeError("Found multiple .freyjaMod.vcf files in folder %s" %stringentFilteredVCFFolder)
+    return [os.path.join(stringentFilteredVCFFolder, candidate) for candidate in candidates]
 
 
 def findBAMFileForVariantCalling(bamFolder:str=readGroupedFolderEnv):
@@ -51,17 +51,31 @@ def findBAMFileForVariantCalling(bamFolder:str=readGroupedFolderEnv):
             candidates.append(bam)
     if len(candidates) == 0:
         raise FileNotFoundError("Unable to find any .bam files in folder %s" %bamFolder)
-    if len(candidates) > 1:
-        raise RuntimeError("Found multiple .bam files in folder %s" %bamFolder)
-    return os.path.join(bamFolder, candidates[0])
+    # if len(candidates) > 1:
+    #     raise RuntimeError("Found multiple .bam files in folder %s" %bamFolder)
+    return [os.path.join(bamFolder, candidate) for candidate in candidates]
 
+def matchFilesBySampleName(bamFiles: list, vcfFiles: list):
+    """Match BAM and VCF files by sample name."""
+    matchedFiles = []
+    bamSampleDict = {os.path.basename(bam).split(".")[0]: bam for bam in bamFiles}
+    vcfSampleDict = {os.path.basename(vcf).split(".")[0]: vcf for vcf in vcfFiles}
+    
+    for sampleName in bamSampleDict:
+        if sampleName in vcfSampleDict:
+            matchedFiles.append((bamSampleDict[sampleName], vcfSampleDict[sampleName]))
+    if not matchedFiles:
+        raise RuntimeError("No matching BAM and VCF files found by sample name.")
+    return matchedFiles
 
 def performFreyjaDemix(inputFolder:str=inputFolderEnv, outputFolder:str=freyjaOutputFolder):
-    variantCallingBAMFile = findBAMFileForVariantCalling()
-    stringentFilteredVCFFile = findFreyjaStringentFilteredVCF(inputFolder)
-    variantTSV = freyjaSupport.tsvConvert.convertVCFtoTSV(stringentFilteredVCFFile, outputFolder)
-    depthTSV = freyjaSupport.mpileupRunner.runMpileup(variantCallingBAMFile, outputFolder)
-    freyjaOutputFile = freyjaSupport.catChariot.freyjaRunner(variantTSV, depthTSV, outputFolder)
+    variantCallingBAMList = findBAMFileForVariantCalling()
+    stringentFilteredVCFList = findFreyjaStringentFilteredVCF(inputFolder)
+    matchedFiles = matchFilesBySampleName(variantCallingBAMList, stringentFilteredVCFList)
+    for variantCallingBAMFile, stringentFilteredVCFFile in matchedFiles:
+        variantTSV = freyjaSupport.tsvConvert.convertVCFtoTSV(stringentFilteredVCFFile, outputFolder)
+        depthTSV = freyjaSupport.mpileupRunner.runMpileup(variantCallingBAMFile, outputFolder)
+        freyjaOutputFile = freyjaSupport.catChariot.freyjaRunner(variantTSV, depthTSV, outputFolder)
     return freyjaOutputFile
 
 
